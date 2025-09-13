@@ -1,0 +1,11 @@
+project_name      = "ecommerce-devops"
+project_owner     = "your-name"
+environment       = "dev"
+aws_region        = "us-east-1"
+key_pair_name     = "ecommerce-devops-key"
+instance_type     = "t3.micro"
+min_instances     = 1
+max_instances     = 2
+desired_instances = 1
+admin_cidr        = "0.0.0.0/0"
+docker_image      = "node:18-alpine"
