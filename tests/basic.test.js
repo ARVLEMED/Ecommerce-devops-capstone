@@ -1,17 +1,27 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const app = require('../src/app');
 
-// Test database connection
+let mongoServer;
+
+// Connect to in-memory MongoDB
 const connectTestDB = async () => {
-  const mongoUri = process.env.MONGODB_TEST_URI || 'mongodb://localhost:27017/ecommerce_test';
-  await mongoose.connect(mongoUri);
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
 };
 
-// Disconnect from test database
+// Disconnect and clean up in-memory MongoDB
 const disconnectTestDB = async () => {
   await mongoose.connection.dropDatabase();
   await mongoose.connection.close();
+  if (mongoServer) {
+    await mongoServer.stop();
+  }
 };
 
 describe('E-Commerce API', () => {
@@ -258,7 +268,6 @@ describe('E-Commerce API', () => {
 
       const responses = await Promise.all(requests);
       
-      // All requests should succeed initially (within rate limit)
       responses.forEach(response => {
         expect([200, 429]).toContain(response.status);
       });
