@@ -1,0 +1,141 @@
+pipeline {
+    agent any
+    
+    parameters {
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['staging', 'production', 'default'],
+            description: 'Environment to destroy'
+        )
+        booleanParam(
+            name: 'CONFIRM_DESTROY',
+            defaultValue: false,
+            description: 'Check this box to confirm you want to destroy infrastructure'
+        )
+        string(
+            name: 'CONFIRMATION_TEXT',
+            defaultValue: '',
+            description: 'Type "DESTROY" to confirm (case sensitive)'
+        )
+    }
+    
+    environment {
+        AWS_CREDENTIALS = credentials('aws-credentials')
+    }
+    
+    stages {
+        stage('Validation') {
+            steps {
+                script {
+                    // Safety checks
+                    if (!params.CONFIRM_DESTROY) {
+                        error('You must check the CONFIRM_DESTROY checkbox')
+                    }
+                    
+                    if (params.CONFIRMATION_TEXT != 'DESTROY') {
+                        error('You must type "DESTROY" in the confirmation text field')
+                    }
+                    
+                    echo "✅ Validation passed. Proceeding with destruction of ${params.ENVIRONMENT} environment"
+                }
+            }
+        }
+        
+        stage('Manual Approval') {
+            steps {
+                script {
+                    timeout(time: 5, unit: 'MINUTES') {
+                        def approver = input(
+                            message: "🚨 FINAL CONFIRMATION 🚨\n\nYou are about to DESTROY the ${params.ENVIRONMENT} environment.\nThis action is IRREVERSIBLE!\n\nAll infrastructure will be deleted:\n- EC2 instances\n- Load balancers\n- VPC and networking\n- S3 buckets (data will be lost!)\n\nProceed with destruction?",
+                            ok: 'YES, DESTROY EVERYTHING',
+                            submitterParameter: 'APPROVER'
+                        )
+                        echo "Destruction approved by: ${approver}"
+                    }
+                }
+            }
+        }
+        
+        stage('Terraform Destroy') {
+            steps {
+                echo "🔥 Destroying ${params.ENVIRONMENT} infrastructure..."
+                script {
+                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
+                        sh '''
+                            cd infrastructure/terraform
+                            
+                            # Initialize Terraform
+                            terraform init
+                            
+                            # Select workspace
+                            terraform workspace select ${ENVIRONMENT}
+                            
+                            # Show what will be destroyed
+                            echo "📋 Resources that will be destroyed:"
+                            terraform plan -destroy
+                            
+                            # Wait a moment for review
+                            sleep 10
+                            
+                            # Destroy infrastructure
+                            echo "🔥 Starting destruction..."
+                            terraform destroy -auto-approve
+                            
+                            # Clean up workspace if not default
+                            if [ "${ENVIRONMENT}" != "default" ]; then
+                                terraform workspace select default
+                                terraform workspace delete ${ENVIRONMENT}
+                            fi
+                            
+                            echo "✅ Infrastructure destroyed successfully!"
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Cleanup Verification') {
+            steps {
+                echo '🔍 Verifying infrastructure cleanup...'
+                script {
+                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
+                        sh '''
+                            # Check for remaining resources (optional)
+                            echo "Checking for any remaining resources..."
+                            
+                            # List EC2 instances with project tag
+                            aws ec2 describe-instances \
+                                --filters "Name=tag:Project,Values=ecommerce-devops-capstone" \
+                                --query "Reservations[*].Instances[*].[InstanceId,State.Name]" \
+                                --output table || true
+                            
+                            # List load balancers
+                            aws elbv2 describe-load-balancers \
+                                --query "LoadBalancers[?contains(LoadBalancerName, 'ecommerce-devops')].[LoadBalancerName,State.Code]" \
+                                --output table || true
+                            
+                            echo "✅ Cleanup verification completed"
+                        '''
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo "🎉 Infrastructure destruction completed successfully!"
+            echo "💰 AWS resources have been cleaned up - no more charges!"
+        }
+        
+        failure {
+            echo "❌ Infrastructure destruction failed!"
+            echo "⚠️  Some resources may still be running. Check AWS console and run terraform destroy manually if needed."
+        }
+        
+        always {
+            // Send notification about destruction
+            echo "📧 Destruction pipeline completed for environment: ${params.ENVIRONMENT}"
+        }
+    }
+}
