@@ -36,7 +36,7 @@ pipeline {
     environment {
         // Application configuration
         NODE_VERSION = '18'
-        DOCKER_IMAGE = "${env.DOCKERHUB_USERNAME ?: 'aronkkoech'}/ecommerce-app"
+        DOCKER_IMAGE = "${env.DOCKERHUB_USERNAME ?: 'arvlemed'}/ecommerce-app"
         BUILD_VERSION = "${env.BUILD_NUMBER}-${env.GIT_COMMIT?.take(7) ?: 'unknown'}"
         BUILD_TIMESTAMP = new Date().format('yyyy-MM-dd_HH-mm-ss')
         
