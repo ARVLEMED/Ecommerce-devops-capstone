@@ -256,45 +256,59 @@ pipeline {
         }
         
         stage('🐳 Container Operations') {
-            steps {
-                echo '🐳 Building and preparing container images...'
-                script {
-                    try {
-                        echo "🏗️ Building Docker image: ${DOCKER_IMAGE}:${BUILD_VERSION}"
-                        
-                        // Build the Docker image
-                        def dockerImage = docker.build("${DOCKER_IMAGE}:${BUILD_VERSION}")
-                        
-                        // Apply appropriate tags
-                        dockerImage.tag('latest')
-                        dockerImage.tag("build-${BUILD_NUMBER}")
-                        
-                        if (env.IS_MAIN_BRANCH == 'true') {
-                            dockerImage.tag('production')
-                            dockerImage.tag('stable')
-                        } else if (env.IS_DEVELOP_BRANCH == 'true') {
-                            dockerImage.tag('staging')
-                            dockerImage.tag('development')
-                        } else {
-                            dockerImage.tag('feature')
-                            dockerImage.tag("branch-${env.BRANCH_NAME}".replaceAll(/[^a-zA-Z0-9.-]/, '-'))
-                        }
-                        
-                        // Store image reference for later stages
-                        env.BUILT_IMAGE = "${DOCKER_IMAGE}:${BUILD_VERSION}"
-                        
-                        echo """
-                        ✅ Docker image built successfully!
-                        📦 Image: ${DOCKER_IMAGE}:${BUILD_VERSION}
-                        🏷️ Tags applied based on branch: ${env.BRANCH_NAME}
-                        """
-                        
-                    } catch (Exception e) {
-                        error("❌ Docker build failed: ${e.getMessage()}")
-                    }
+    steps {
+        echo '🐳 Building and preparing container images...'
+        script {
+            try {
+                echo "🏗️ Building Docker image: ${DOCKER_IMAGE}:${BUILD_VERSION}"
+
+                // Replace docker.build() with a memory-limited docker build
+                sh """
+                    docker build \
+                      --memory=2g \
+                      --cpus=2 \
+                      -t ${DOCKER_IMAGE}:${BUILD_VERSION} .
+                """
+
+                // Apply appropriate tags
+                sh """
+                    docker tag ${DOCKER_IMAGE}:${BUILD_VERSION} ${DOCKER_IMAGE}:latest
+                    docker tag ${DOCKER_IMAGE}:${BUILD_VERSION} ${DOCKER_IMAGE}:build-${BUILD_NUMBER}
+                """
+
+                if (env.IS_MAIN_BRANCH == 'true') {
+                    sh """
+                        docker tag ${DOCKER_IMAGE}:${BUILD_VERSION} ${DOCKER_IMAGE}:production
+                        docker tag ${DOCKER_IMAGE}:${BUILD_VERSION} ${DOCKER_IMAGE}:stable
+                    """
+                } else if (env.IS_DEVELOP_BRANCH == 'true') {
+                    sh """
+                        docker tag ${DOCKER_IMAGE}:${BUILD_VERSION} ${DOCKER_IMAGE}:staging
+                        docker tag ${DOCKER_IMAGE}:${BUILD_VERSION} ${DOCKER_IMAGE}:development
+                    """
+                } else {
+                    def featureTag = env.BRANCH_NAME.replaceAll(/[^a-zA-Z0-9.-]/, '-')
+                    sh """
+                        docker tag ${DOCKER_IMAGE}:${BUILD_VERSION} ${DOCKER_IMAGE}:feature
+                        docker tag ${DOCKER_IMAGE}:${BUILD_VERSION} ${DOCKER_IMAGE}:branch-${featureTag}
+                    """
                 }
+
+                // Store image reference for later stages
+                env.BUILT_IMAGE = "${DOCKER_IMAGE}:${BUILD_VERSION}"
+
+                echo """
+                ✅ Docker image built successfully with resource limits!
+                📦 Image: ${DOCKER_IMAGE}:${BUILD_VERSION}
+                🏷️ Tags applied based on branch: ${env.BRANCH_NAME}
+                """
+            } catch (Exception e) {
+                error("❌ Docker build failed: ${e.getMessage()}")
             }
         }
+    }
+}
+
         
         stage('🛡️ Container Security Scan') {
             when {
