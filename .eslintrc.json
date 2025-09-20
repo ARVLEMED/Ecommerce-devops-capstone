@@ -1,22 +1,27 @@
 {
   "env": {
     "node": true,
-    "es2021": true,
-    "jest": true
+    "es2021": true
   },
-  "extends": [
-    "eslint:recommended",
-    "airbnb-base"
-  ],
+  "extends": ["eslint:recommended"],
   "parserOptions": {
-    "ecmaVersion": "latest",
+    "ecmaVersion": 12,
     "sourceType": "module"
   },
   "rules": {
-    "no-console": "off",
-    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
-    "comma-dangle": ["error", "never"],
-    "quotes": ["error", "single"],
-    "semi": ["error", "always"]
+    "no-trailing-spaces": "warn",
+    "eol-last": ["warn", "always"],
+    "comma-dangle": ["warn", "never"],
+    "space-before-function-paren": ["warn", "never"],
+
+    // Allow MongoDB/Mongoose conventions
+    "no-underscore-dangle": ["off"],
+
+    // Relax strict return enforcement
+    "consistent-return": "off",
+
+    // Other helpful but non-blocking rules
+    "func-names": "warn",
+    "no-console": "off"
   }
 }

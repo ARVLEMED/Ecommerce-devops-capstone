@@ -1,38 +1,38 @@
 const Joi = require('joi');
 
 // Generic validation middleware
-const validate = (schema) => {
-  return (req, res, next) => {
-    const { error, value } = schema.validate(req.body, {
-      abortEarly: false,
-      allowUnknown: false,
-      stripUnknown: true
+const validate = (schema) => (req, res, next) => {
+  const { error, value } = schema.validate(req.body, {
+    abortEarly: false,
+    allowUnknown: false,
+    stripUnknown: true
+  });
+
+  if (error) {
+    const errors = error.details.map((detail) => ({
+      field: detail.path.join('.'),
+      message: detail.message
+    }));
+
+    return res.status(400).json({
+      success: false,
+      error: 'Validation failed',
+      details: errors
     });
+  }
 
-    if (error) {
-      const errors = error.details.map(detail => ({
-        field: detail.path.join('.'),
-        message: detail.message
-      }));
-
-      return res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        details: errors
-      });
-    }
-
-    req.validatedData = value;
-    next();
-  };
+  req.validatedData = value;
+  next();
 };
 
 // Validation schemas
 const schemas = {
   // User registration
   register: Joi.object({
-    firstName: Joi.string().trim().min(2).max(50).required(),
-    lastName: Joi.string().trim().min(2).max(50).required(),
+    firstName: Joi.string().trim().min(2).max(50)
+      .required(),
+    lastName: Joi.string().trim().min(2).max(50)
+      .required(),
     email: Joi.string().email().lowercase().required(),
     password: Joi.string().min(6).max(128).required(),
     phone: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).optional(),
@@ -48,8 +48,10 @@ const schemas = {
 
   // Product creation
   createProduct: Joi.object({
-    name: Joi.string().trim().min(2).max(100).required(),
-    description: Joi.string().trim().min(10).max(2000).required(),
+    name: Joi.string().trim().min(2).max(100)
+      .required(),
+    description: Joi.string().trim().min(10).max(2000)
+      .required(),
     shortDescription: Joi.string().trim().max(200).optional(),
     price: Joi.number().min(0).required(),
     comparePrice: Joi.number().min(0).optional(),
@@ -69,8 +71,10 @@ const schemas = {
 
   // Update profile
   updateProfile: Joi.object({
-    firstName: Joi.string().trim().min(2).max(50).optional(),
-    lastName: Joi.string().trim().min(2).max(50).optional(),
+    firstName: Joi.string().trim().min(2).max(50)
+      .optional(),
+    lastName: Joi.string().trim().min(2).max(50)
+      .optional(),
     phone: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).optional(),
     dateOfBirth: Joi.date().max('now').optional(),
     gender: Joi.string().valid('male', 'female', 'other', 'prefer-not-to-say').optional()

@@ -37,8 +37,8 @@ class DatabaseConfig {
       // ✅ Production-safe writes
       ...(process.env.NODE_ENV === 'production' && {
         retryWrites: true,
-        w: 'majority',
-      }),
+        w: 'majority'
+      })
     };
   }
 
@@ -104,14 +104,14 @@ class DatabaseConfig {
       0: 'disconnected',
       1: 'connected',
       2: 'connecting',
-      3: 'disconnecting',
+      3: 'disconnecting'
     };
 
     return {
       state: states[mongoose.connection.readyState],
       database: mongoose.connection.db?.databaseName,
       host: mongoose.connection.host,
-      port: mongoose.connection.port,
+      port: mongoose.connection.port
     };
   }
 }

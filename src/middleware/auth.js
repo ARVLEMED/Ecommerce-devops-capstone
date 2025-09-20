@@ -25,10 +25,10 @@ const protect = async (req, res, next) => {
     try {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
+
       // Get user from token
       const user = await User.findById(decoded.id).select('-password');
-      
+
       if (!user) {
         return res.status(401).json({
           success: false,
@@ -66,23 +66,21 @@ const protect = async (req, res, next) => {
 };
 
 // Grant access to specific roles
-const authorize = (...roles) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Not authorized to access this route'
-      });
-    }
+const authorize = (...roles) => (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      error: 'Not authorized to access this route'
+    });
+  }
 
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        error: `Role ${req.user.role} is not authorized to access this route`
-      });
-    }
-    next();
-  };
+  if (!roles.includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      error: `Role ${req.user.role} is not authorized to access this route`
+    });
+  }
+  next();
 };
 
 // Optional authentication - doesn't require login
@@ -100,7 +98,7 @@ const optionalAuth = async (req, res, next) => {
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.id).select('-password');
-        
+
         if (user && user.status === 'active' && !user.isLocked) {
           req.user = user;
         }

@@ -22,7 +22,7 @@ const productSchema = new mongoose.Schema({
     type: String,
     maxlength: [200, 'Short description cannot be more than 200 characters']
   },
-  
+
   // Pricing Information
   price: {
     type: Number,
@@ -32,7 +32,7 @@ const productSchema = new mongoose.Schema({
   comparePrice: {
     type: Number,
     validate: {
-      validator: function(v) {
+      validator(v) {
         return v === null || v === undefined || v >= this.price;
       },
       message: 'Compare price must be greater than or equal to price'
@@ -42,7 +42,7 @@ const productSchema = new mongoose.Schema({
     type: Number,
     min: [0, 'Cost cannot be negative']
   },
-  
+
   // Category & Classification
   category: {
     type: mongoose.Schema.Types.ObjectId,
@@ -62,7 +62,7 @@ const productSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  
+
   // Images & Media
   images: [{
     url: {
@@ -78,7 +78,7 @@ const productSchema = new mongoose.Schema({
       default: false
     }
   }],
-  
+
   // Inventory Management
   inventory: {
     sku: {
@@ -108,7 +108,7 @@ const productSchema = new mongoose.Schema({
       default: true
     }
   },
-  
+
   // Product Variants (e.g., size, color)
   variants: [{
     name: {
@@ -137,7 +137,7 @@ const productSchema = new mongoose.Schema({
       }
     }]
   }],
-  
+
   // Physical Properties
   dimensions: {
     weight: {
@@ -157,7 +157,7 @@ const productSchema = new mongoose.Schema({
       unit: { type: String, enum: ['cm', 'm', 'in', 'ft'], default: 'cm' }
     }
   },
-  
+
   // Status & Visibility
   status: {
     type: String,
@@ -173,7 +173,7 @@ const productSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  
+
   // SEO & Marketing
   seo: {
     title: {
@@ -186,7 +186,7 @@ const productSchema = new mongoose.Schema({
     },
     keywords: [String]
   },
-  
+
   // Sales & Analytics
   salesCount: {
     type: Number,
@@ -211,7 +211,7 @@ const productSchema = new mongoose.Schema({
       min: 0
     }
   },
-  
+
   // Timestamps
   publishedAt: {
     type: Date
@@ -232,16 +232,16 @@ const productSchema = new mongoose.Schema({
 });
 
 // Virtual for primary image
-productSchema.virtual('primaryImage').get(function() {
+productSchema.virtual('primaryImage').get(function () {
   if (this.images && this.images.length > 0) {
-    const primaryImg = this.images.find(img => img.isPrimary);
+    const primaryImg = this.images.find((img) => img.isPrimary);
     return primaryImg || this.images[0];
   }
   return null;
 });
 
 // Virtual for stock status
-productSchema.virtual('stockStatus').get(function() {
+productSchema.virtual('stockStatus').get(function () {
   if (!this.inventory.trackQuantity) return 'in-stock';
   if (this.inventory.quantity <= 0) return 'out-of-stock';
   if (this.inventory.quantity <= this.inventory.lowStockThreshold) return 'low-stock';
@@ -249,7 +249,7 @@ productSchema.virtual('stockStatus').get(function() {
 });
 
 // Virtual for discount percentage
-productSchema.virtual('discountPercentage').get(function() {
+productSchema.virtual('discountPercentage').get(function () {
   if (this.comparePrice && this.comparePrice > this.price) {
     return Math.round(((this.comparePrice - this.price) / this.comparePrice) * 100);
   }
@@ -257,10 +257,10 @@ productSchema.virtual('discountPercentage').get(function() {
 });
 
 // Virtual for availability
-productSchema.virtual('isAvailable').get(function() {
-  return this.status === 'active' && 
-         this.visibility === 'visible' && 
-         (this.stockStatus !== 'out-of-stock' || !this.inventory.trackQuantity);
+productSchema.virtual('isAvailable').get(function () {
+  return this.status === 'active'
+         && this.visibility === 'visible'
+         && (this.stockStatus !== 'out-of-stock' || !this.inventory.trackQuantity);
 });
 
 // Indexes for performance
@@ -277,7 +277,7 @@ productSchema.index({ salesCount: -1 });
 productSchema.index({ 'rating.average': -1 });
 
 // Pre-save middleware to generate slug
-productSchema.pre('save', function(next) {
+productSchema.pre('save', function (next) {
   if (this.isModified('name') || this.isNew) {
     this.slug = this.name
       .toLowerCase()
@@ -285,7 +285,7 @@ productSchema.pre('save', function(next) {
       .replace(/[^a-z0-9\s-]/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-');
-    
+
     // Ensure uniqueness by appending timestamp if needed
     if (this.isNew) {
       this.slug = `${this.slug}-${Date.now()}`;
@@ -295,7 +295,7 @@ productSchema.pre('save', function(next) {
 });
 
 // Pre-save middleware to ensure only one primary image
-productSchema.pre('save', function(next) {
+productSchema.pre('save', function (next) {
   if (this.images && this.images.length > 0) {
     let primaryCount = 0;
     this.images.forEach((image, index) => {
@@ -306,7 +306,7 @@ productSchema.pre('save', function(next) {
         }
       }
     });
-    
+
     // If no primary image, make the first one primary
     if (primaryCount === 0) {
       this.images[0].isPrimary = true;
@@ -316,7 +316,7 @@ productSchema.pre('save', function(next) {
 });
 
 // Pre-save middleware to update publishedAt
-productSchema.pre('save', function(next) {
+productSchema.pre('save', function (next) {
   if (this.isModified('status') && this.status === 'active' && !this.publishedAt) {
     this.publishedAt = new Date();
   }
@@ -324,7 +324,7 @@ productSchema.pre('save', function(next) {
 });
 
 // Static method to find available products
-productSchema.statics.findAvailable = function() {
+productSchema.statics.findAvailable = function () {
   return this.find({
     status: 'active',
     visibility: 'visible'
@@ -332,7 +332,7 @@ productSchema.statics.findAvailable = function() {
 };
 
 // Static method to find by category
-productSchema.statics.findByCategory = function(categoryId) {
+productSchema.statics.findByCategory = function (categoryId) {
   return this.find({
     category: categoryId,
     status: 'active',
@@ -341,7 +341,7 @@ productSchema.statics.findByCategory = function(categoryId) {
 };
 
 // Static method to find featured products
-productSchema.statics.findFeatured = function(limit = 10) {
+productSchema.statics.findFeatured = function (limit = 10) {
   return this.find({
     featured: true,
     status: 'active',
@@ -350,7 +350,7 @@ productSchema.statics.findFeatured = function(limit = 10) {
 };
 
 // Static method for search
-productSchema.statics.search = function(query, options = {}) {
+productSchema.statics.search = function (query, options = {}) {
   const {
     category,
     minPrice,
@@ -361,7 +361,7 @@ productSchema.statics.search = function(query, options = {}) {
     limit = 20,
     skip = 0
   } = options;
-  
+
   const searchQuery = {
     status: 'active',
     visibility: 'visible',
@@ -372,7 +372,7 @@ productSchema.statics.search = function(query, options = {}) {
     ...(brand && { brand: new RegExp(brand, 'i') }),
     ...(tags && { tags: { $in: tags } })
   };
-  
+
   return this.find(searchQuery)
     .sort(sort)
     .skip(skip)
@@ -382,13 +382,13 @@ productSchema.statics.search = function(query, options = {}) {
 };
 
 // Instance method to update stock
-productSchema.methods.updateStock = function(quantity) {
+productSchema.methods.updateStock = function (quantity) {
   this.inventory.quantity += quantity;
   return this.save();
 };
 
 // Instance method to add view
-productSchema.methods.addView = function() {
+productSchema.methods.addView = function () {
   this.viewCount += 1;
   return this.save();
 };

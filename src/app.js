@@ -95,7 +95,7 @@ const startServer = async () => {
   try {
     // Connect to MongoDB
     await dbConfig.connect();
-    
+
     // Start server
     const PORT = process.env.PORT || 3000;
     const server = app.listen(PORT, () => {
@@ -113,7 +113,7 @@ const startServer = async () => {
           console.error('❌ Error during server shutdown:', err);
           process.exit(1);
         }
-        
+
         mongoose.connection.close(false, () => {
           console.log('📴 Database connection closed.');
           console.log('✅ Server shut down successfully.');
@@ -125,7 +125,6 @@ const startServer = async () => {
     // Handle shutdown signals
     process.on('SIGTERM', gracefulShutdown);
     process.on('SIGINT', gracefulShutdown);
-
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);

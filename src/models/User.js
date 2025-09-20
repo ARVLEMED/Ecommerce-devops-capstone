@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema({
     minlength: [6, 'Password must be at least 6 characters'],
     select: false // Don't include password in queries by default
   },
-  
+
   // Profile Information
   avatar: {
     type: String,
@@ -49,7 +49,7 @@ const userSchema = new mongoose.Schema({
     enum: ['male', 'female', 'other', 'prefer-not-to-say'],
     default: 'prefer-not-to-say'
   },
-  
+
   // Address Information
   addresses: [{
     type: {
@@ -88,7 +88,7 @@ const userSchema = new mongoose.Schema({
       default: 'Kenya'
     }
   }],
-  
+
   // User Role & Status
   role: {
     type: String,
@@ -100,7 +100,7 @@ const userSchema = new mongoose.Schema({
     enum: ['active', 'inactive', 'suspended'],
     default: 'active'
   },
-  
+
   // Email Verification
   isEmailVerified: {
     type: Boolean,
@@ -108,11 +108,11 @@ const userSchema = new mongoose.Schema({
   },
   emailVerificationToken: String,
   emailVerificationExpires: Date,
-  
+
   // Password Reset
   passwordResetToken: String,
   passwordResetExpires: Date,
-  
+
   // Shopping Preferences
   preferences: {
     currency: {
@@ -138,7 +138,7 @@ const userSchema = new mongoose.Schema({
       }
     }
   },
-  
+
   // Activity Tracking
   lastLogin: {
     type: Date,
@@ -156,12 +156,12 @@ const userSchema = new mongoose.Schema({
 });
 
 // Virtual for user's full name
-userSchema.virtual('fullName').get(function() {
+userSchema.virtual('fullName').get(function () {
   return `${this.firstName} ${this.lastName}`;
 });
 
 // Virtual for account lock status
-userSchema.virtual('isLocked').get(function() {
+userSchema.virtual('isLocked').get(function () {
   return !!(this.lockUntil && this.lockUntil > Date.now());
 });
 
@@ -172,10 +172,10 @@ userSchema.index({ status: 1 });
 userSchema.index({ createdAt: -1 });
 
 // Pre-save middleware to hash password
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   // Only hash the password if it has been modified (or is new)
   if (!this.isModified('password')) return next();
-  
+
   try {
     // Hash password with cost of 12
     const saltRounds = process.env.NODE_ENV === 'production' ? 12 : 10;
@@ -187,7 +187,7 @@ userSchema.pre('save', async function(next) {
 });
 
 // Pre-save middleware to ensure only one default address
-userSchema.pre('save', function(next) {
+userSchema.pre('save', function (next) {
   if (this.addresses && this.addresses.length > 0) {
     let defaultCount = 0;
     this.addresses.forEach((address, index) => {
@@ -198,7 +198,7 @@ userSchema.pre('save', function(next) {
         }
       }
     });
-    
+
     // If no default address, make the first one default
     if (defaultCount === 0) {
       this.addresses[0].isDefault = true;
@@ -208,7 +208,7 @@ userSchema.pre('save', function(next) {
 });
 
 // Instance method to check password
-userSchema.methods.comparePassword = async function(candidatePassword) {
+userSchema.methods.comparePassword = async function (candidatePassword) {
   try {
     return await bcrypt.compare(candidatePassword, this.password);
   } catch (error) {
@@ -217,20 +217,20 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 };
 
 // Instance method to generate JWT token
-userSchema.methods.generateToken = function() {
+userSchema.methods.generateToken = function () {
   const payload = {
     id: this._id,
     email: this.email,
     role: this.role
   };
-  
+
   return jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d'
   });
 };
 
 // Instance method to increment login attempts
-userSchema.methods.incLoginAttempts = function() {
+userSchema.methods.incLoginAttempts = function () {
   // If we have a previous lock that has expired, restart at 1
   if (this.lockUntil && this.lockUntil < Date.now()) {
     return this.updateOne({
@@ -238,31 +238,31 @@ userSchema.methods.incLoginAttempts = function() {
       $unset: { lockUntil: 1 }
     });
   }
-  
+
   const updates = { $inc: { loginAttempts: 1 } };
-  
+
   // Lock account after 5 failed attempts for 2 hours
   if (this.loginAttempts + 1 >= 5 && !this.isLocked) {
     updates.$set = { lockUntil: Date.now() + 2 * 60 * 60 * 1000 }; // 2 hours
   }
-  
+
   return this.updateOne(updates);
 };
 
 // Instance method to reset login attempts
-userSchema.methods.resetLoginAttempts = function() {
+userSchema.methods.resetLoginAttempts = function () {
   return this.updateOne({
     $unset: { loginAttempts: 1, lockUntil: 1 }
   });
 };
 
 // Static method to find user by email
-userSchema.statics.findByEmail = function(email) {
+userSchema.statics.findByEmail = function (email) {
   return this.findOne({ email: email.toLowerCase() });
 };
 
 // Static method to find active users
-userSchema.statics.findActiveUsers = function() {
+userSchema.statics.findActiveUsers = function () {
   return this.find({ status: 'active' });
 };
 

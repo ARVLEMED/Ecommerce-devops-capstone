@@ -2,6 +2,7 @@ const express = require('express');
 const { protect } = require('../middleware/auth');
 const { validate, schemas } = require('../middleware/validation');
 const User = require('../models/User');
+
 const router = express.Router();
 
 // @desc    Register user
@@ -9,7 +10,9 @@ const router = express.Router();
 // @access  Public
 router.post('/register', validate(schemas.register), async (req, res, next) => {
   try {
-    const { firstName, lastName, email, password, phone, dateOfBirth, gender } = req.validatedData;
+    const {
+      firstName, lastName, email, password, phone, dateOfBirth, gender
+    } = req.validatedData;
 
     // Check if user already exists
     const existingUser = await User.findByEmail(email);
@@ -70,7 +73,7 @@ router.post('/login', validate(schemas.login), async (req, res, next) => {
 
     // Get user with password field
     const user = await User.findByEmail(email).select('+password');
-    
+
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -96,11 +99,11 @@ router.post('/login', validate(schemas.login), async (req, res, next) => {
 
     // Check password
     const isPasswordValid = await user.comparePassword(password);
-    
+
     if (!isPasswordValid) {
       // Increment login attempts
       await user.incLoginAttempts();
-      
+
       return res.status(401).json({
         success: false,
         error: 'Invalid credentials'
@@ -255,7 +258,9 @@ router.put('/change-password', protect, validate(schemas.changePassword), async 
 // @access  Private
 router.post('/addresses', protect, async (req, res, next) => {
   try {
-    const { type, street, city, state, zipCode, country, isDefault } = req.body;
+    const {
+      type, street, city, state, zipCode, country, isDefault
+    } = req.body;
 
     // Validation
     if (!street || !city || !state || !zipCode) {
@@ -269,7 +274,7 @@ router.post('/addresses', protect, async (req, res, next) => {
 
     // If this is set as default, remove default from other addresses
     if (isDefault) {
-      user.addresses.forEach(address => {
+      user.addresses.forEach((address) => {
         address.isDefault = false;
       });
     }
@@ -319,7 +324,7 @@ router.put('/addresses/:addressId', protect, async (req, res, next) => {
 
     // If setting as default, remove default from other addresses
     if (updates.isDefault) {
-      user.addresses.forEach(addr => {
+      user.addresses.forEach((addr) => {
         if (addr._id.toString() !== addressId) {
           addr.isDefault = false;
         }
@@ -327,7 +332,7 @@ router.put('/addresses/:addressId', protect, async (req, res, next) => {
     }
 
     // Update address fields
-    Object.keys(updates).forEach(key => {
+    Object.keys(updates).forEach((key) => {
       if (updates[key] !== undefined) {
         address[key] = updates[key];
       }
@@ -365,7 +370,7 @@ router.delete('/addresses/:addressId', protect, async (req, res, next) => {
     }
 
     address.remove();
-    
+
     // If removed address was default and there are other addresses, make first one default
     if (address.isDefault && user.addresses.length > 0) {
       user.addresses[0].isDefault = true;

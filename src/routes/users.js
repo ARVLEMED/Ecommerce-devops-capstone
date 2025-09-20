@@ -2,6 +2,7 @@
 const express = require('express');
 const { protect, authorize } = require('../middleware/auth');
 const User = require('../models/User');
+
 const router = express.Router();
 
 // All routes are protected and require admin role
@@ -22,7 +23,7 @@ router.get('/', async (req, res, next) => {
     } = req.query;
 
     const query = {};
-    
+
     if (role) query.role = role;
     if (status) query.status = status;
     if (search) {

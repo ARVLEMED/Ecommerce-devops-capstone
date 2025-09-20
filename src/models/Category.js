@@ -53,7 +53,7 @@ categorySchema.virtual('subcategories', {
 });
 
 // Pre-save middleware to generate slug
-categorySchema.pre('save', function(next) {
+categorySchema.pre('save', function (next) {
   if (this.isModified('name') || this.isNew) {
     this.slug = this.name
       .toLowerCase()

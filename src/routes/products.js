@@ -2,6 +2,7 @@
 const express = require('express');
 const { protect, authorize, optionalAuth } = require('../middleware/auth');
 const Product = require('../models/Product');
+
 const router = express.Router();
 
 // @desc    Get all products
@@ -108,4 +109,3 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
 });
 
 module.exports = router;
-
