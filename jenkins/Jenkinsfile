@@ -263,12 +263,10 @@ pipeline {
                 echo "🏗️ Building Docker image: ${DOCKER_IMAGE}:${BUILD_VERSION}"
 
                 // Replace docker.build() with a memory-limited docker build
-                sh """
-                    docker build \
-                      --memory=2g \
-                      --cpus=2 \
-                      -t ${DOCKER_IMAGE}:${BUILD_VERSION} .
-                """
+               sh """
+docker buildx create --use --name mybuilder || true
+docker buildx build --platform linux/amd64 -t ${DOCKER_IMAGE}:${BUILD_VERSION} --load .
+"""
 
                 // Apply appropriate tags
                 sh """
