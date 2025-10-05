@@ -8,20 +8,20 @@ scrape_configs:
   # Prometheus itself
   - job_name: 'prometheus'
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ['prometheus:9090']
 
   # Node.js application
   - job_name: 'ecommerce-app'
-    static_configs:
-      - targets: ['app:3000']
     metrics_path: '/metrics'
+    static_configs:
+      - targets: ['app:3000']  # ← Changed here: Use service name 'app'
 
   # Node exporter for system metrics
   - job_name: 'node-exporter'
     static_configs:
-      - targets: ['node-exporter:9100']
+      - targets: ['node_exporter:9100']
 
-  # MongoDB exporter
+  # MongoDB exporter (if added later)
   - job_name: 'mongodb'
     static_configs:
       - targets: ['mongodb-exporter:9216']

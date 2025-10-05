@@ -1,3 +1,5 @@
+version: '3.9'
+
 services:
   mongodb:
     image: mongo:7.0
@@ -14,10 +16,11 @@ services:
     networks:
       - ecommerce-network
     healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
+      start_period: 5s
 
   redis:
     image: redis:7.2-alpine
@@ -78,14 +81,63 @@ services:
     networks:
       - ecommerce-network
 
+  # --- MONITORING SERVICES ---
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+    volumes:
+      - ./monitoring/grafana:/var/lib/grafana
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    ports:
+      - "9100:9100"
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  mongodb-exporter:
+    image: percona/mongodb_exporter:0.40
+    container_name: mongodb-exporter
+    restart: unless-stopped
+    ports:
+      - "9216:9216"
+    environment:
+      - MONGODB_URI=mongodb://${MONGO_USER}:${MONGO_PASS}@mongodb:27017/ecommerce_dev?authSource=admin
+    networks:
+      - monitoring
+      - ecommerce-network
+
+
+# --- VOLUMES ---
 volumes:
   mongodb_data:
   redis_data:
-  uploads_data:
 
+# --- NETWORKS ---
 networks:
   ecommerce-network:
-    driver: bridge
   monitoring:
-    external: true
-    name: ecommerce-devops-capstone_monitoring

@@ -7,9 +7,6 @@ const morgan = require('morgan');
 const path = require('path');
 require('dotenv').config();
 const { register, metricsMiddleware } = require('./middleware/metrics');
-//metrics middleware
-app.use(metricsMiddleware);
-
 
 // Import configuration
 const dbConfig = require('./config/database');
@@ -24,8 +21,11 @@ const orderRoutes = require('./routes/orders');
 const errorHandler = require('./middleware/errorHandler');
 const notFound = require('./middleware/notFound');
 
-// Create Express application
+// ✅ Create Express application FIRST
 const app = express();
+
+// ✅ Then apply metrics middleware
+app.use(metricsMiddleware);
 
 // Security middleware
 app.use(helmet()); // Set security headers
@@ -39,7 +39,7 @@ app.use(cors({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 100,
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false
@@ -52,7 +52,8 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-//metrics endpoint
+
+// Metrics endpoint
 app.get('/metrics', async (req, res) => {
   try {
     res.set('Content-Type', register.contentType);
@@ -61,6 +62,7 @@ app.get('/metrics', async (req, res) => {
     res.status(500).end(err);
   }
 });
+
 // Static files
 app.use('/static', express.static(path.join(__dirname, '../public')));
 
@@ -69,7 +71,6 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/orders', orderRoutes);
-
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -106,10 +107,7 @@ app.use(errorHandler);
 // Database connection
 const startServer = async () => {
   try {
-    // Connect to MongoDB
     await dbConfig.connect();
-
-    // Start server
     const PORT = process.env.PORT || 3000;
     const server = app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
@@ -118,7 +116,6 @@ const startServer = async () => {
       console.log(`📚 API docs: http://localhost:${PORT}/api/v1`);
     });
 
-    // Graceful shutdown
     const gracefulShutdown = () => {
       console.log('\n🔄 Shutting down gracefully...');
       server.close((err) => {
@@ -135,7 +132,6 @@ const startServer = async () => {
       });
     };
 
-    // Handle shutdown signals
     process.on('SIGTERM', gracefulShutdown);
     process.on('SIGINT', gracefulShutdown);
   } catch (error) {
@@ -144,7 +140,6 @@ const startServer = async () => {
   }
 };
 
-// Start the server
 if (require.main === module) {
   startServer();
 }
