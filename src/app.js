@@ -6,6 +6,10 @@ const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const path = require('path');
 require('dotenv').config();
+const { register, metricsMiddleware } = require('./middleware/metrics');
+//metrics middleware
+app.use(metricsMiddleware);
+
 
 // Import configuration
 const dbConfig = require('./config/database');
@@ -48,7 +52,15 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
+//metrics endpoint
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', register.contentType);
+    res.end(await register.metrics());
+  } catch (err) {
+    res.status(500).end(err);
+  }
+});
 // Static files
 app.use('/static', express.static(path.join(__dirname, '../public')));
 
@@ -57,6 +69,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/orders', orderRoutes);
+
 
 // Health check endpoint
 app.get('/health', (req, res) => {

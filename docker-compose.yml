@@ -55,6 +55,7 @@ services:
         condition: service_healthy
     networks:
       - ecommerce-network
+      - monitoring
     healthcheck:
       test: ["CMD", "node", "healthcheck.js"]
       interval: 30s
@@ -85,3 +86,6 @@ volumes:
 networks:
   ecommerce-network:
     driver: bridge
+  monitoring:
+    external: true
+    name: ecommerce-devops-capstone_monitoring
